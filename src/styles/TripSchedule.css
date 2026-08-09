@@ -1,0 +1,37 @@
+/* Trip schedule page — scoped helpers ported from the Claude Design source.
+   Dynamic/stateful styles live inline in TripSchedulePage.tsx; only the
+   class-based helpers and the expand keyframe live here. */
+
+.trip-schedule {
+  font-family: system-ui, "PingFang TC", "Microsoft JhengHei", Avenir, Helvetica,
+    Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.trip-schedule .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Hide the scrollbar on the horizontal day-tab / filter strips */
+.trip-schedule .noscroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.trip-schedule .noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+.trip-schedule button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes tripRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
