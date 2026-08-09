@@ -211,6 +211,21 @@ const flightTag: CSSProperties = {
   padding: "4px 8px",
   borderRadius: 6,
 };
+const splitLink: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  marginTop: 12,
+  padding: "13px 16px",
+  background: "rgba(206,184,136,0.10)",
+  border: "1px solid rgba(206,184,136,0.32)",
+  borderRadius: 11,
+  color: "var(--purdue-gold)",
+  fontSize: "0.86rem",
+  fontWeight: 600,
+  textDecoration: "none",
+};
 const infoCard: CSSProperties = {
   padding: "16px 18px",
   background: "var(--space-light)",
@@ -554,6 +569,15 @@ export function TripSchedulePage() {
             </div>
           ))}
         </div>
+
+        {/* The calculator is a separate repo and a separate Pages project site,
+            so this is a plain cross-origin-path link, not a router <Link>. */}
+        <a href="/trip-debt-calculator" style={splitLink}>
+          <span>💰 分帳計算機</span>
+          <span className="mono" style={{ fontSize: "0.72rem", opacity: 0.75 }}>
+            記帳・結清 →
+          </span>
+        </a>
       </header>
 
       {/* ---- sticky day tabs ---- */}

@@ -39,17 +39,55 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const REPO_DIR = path.join(REPO_ROOT, 'src', 'content', 'trip');
 const STATE_FILE = path.join(__dirname, '.trip-sync.json');
 
-// The vault folder was renamed from "首爾 釜山 Trip Planner" at some point; this
-// tracks the current name. Rename it again and either update this or export
-// TRIP_VAULT_DIR.
-const DEFAULT_VAULT_DIR =
-  '/Users/seanachan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Obsidian Vault/Travel/20260830_首爾+釜山';
-const VAULT_DIR = process.env.TRIP_VAULT_DIR || DEFAULT_VAULT_DIR;
+const TRAVEL_ROOT =
+  '/Users/seanachan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Obsidian Vault/Travel';
+const DEFAULT_VAULT_DIR = path.join(TRAVEL_ROOT, '20260830_首爾+釜山');
+
+// The itinerary note is identified by the same marker the parser uses, so a
+// folder rename in Obsidian (which has happened) does not break the sync.
+const ITINERARY_MARKER = '## 每日行程';
+
+function holdsItinerary(dir) {
+  return listMdFiles(dir).some((name) => {
+    try {
+      return readFileSync(path.join(dir, name), 'utf8').includes(ITINERARY_MARKER);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function locateVaultDir() {
+  if (process.env.TRIP_VAULT_DIR) return process.env.TRIP_VAULT_DIR;
+  if (existsSync(DEFAULT_VAULT_DIR)) return DEFAULT_VAULT_DIR;
+  if (!existsSync(TRAVEL_ROOT)) return DEFAULT_VAULT_DIR;
+
+  const found = readdirSync(TRAVEL_ROOT, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => path.join(TRAVEL_ROOT, e.name))
+    .filter(holdsItinerary);
+
+  if (found.length === 1) {
+    console.log(`note: 資料夾已更名，改用 ${path.basename(found[0])}`);
+    return found[0];
+  }
+  if (found.length > 1) {
+    throw new Error(
+      `Travel/ 下有多個資料夾含行程筆記，無法判斷要用哪一個:\n` +
+        found.map((d) => `  ${d}`).join('\n') +
+        '\n請設定環境變數 TRIP_VAULT_DIR 指定。',
+    );
+  }
+  return DEFAULT_VAULT_DIR;
+}
+
+const VAULT_DIR = locateVaultDir();
 
 function assertVaultExists() {
   if (!existsSync(VAULT_DIR)) {
     throw new Error(
       `找不到 Obsidian vault 目錄:\n  ${VAULT_DIR}\n` +
+        `也在 ${TRAVEL_ROOT} 下找不到含「${ITINERARY_MARKER}」的資料夾。\n` +
         '請確認 iCloud 已同步完成，或設定環境變數 TRIP_VAULT_DIR 指向正確路徑。',
     );
   }

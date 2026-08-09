@@ -180,6 +180,38 @@ function stripFrontmatter(raw: string): string {
   return raw.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "");
 }
 
+/**
+ * Markdown footnotes, used to keep the long 備註 prose out of the table cells
+ * that carry it — a 1,200-character cell makes the whole day unreadable in
+ * Obsidian. A cell holds `… [^kbo-ticket]`, the prose lives in a
+ * `[^kbo-ticket]: …` definition at the bottom of the note, and Obsidian shows
+ * it on hover.
+ *
+ * Definitions are single-line: the prose is reassembled into the cell before
+ * anything else parses it, so a continuation line would have to survive a
+ * split that the table parser never sees. Returns the note's lines with the
+ * definitions removed so they cannot leak into a `## ` section.
+ */
+function extractFootnotes(lines: string[]): {
+  footnotes: Map<string, string>;
+  lines: string[];
+} {
+  const footnotes = new Map<string, string>();
+  const kept: string[] = [];
+  for (const line of lines) {
+    const match = /^\[\^([^\]]+)\]:\s*(.*)$/.exec(line);
+    if (match) footnotes.set(match[1], match[2].trim());
+    else kept.push(line);
+  }
+  return { footnotes, lines: kept };
+}
+
+/** Replace `[^label]` references with their definition. An undefined label is
+ * left in place — a visible marker beats silently dropping the prose. */
+function resolveFootnotes(text: string, footnotes: Map<string, string>): string {
+  return text.replace(/\[\^([^\]]+)\]/g, (marker, label: string) => footnotes.get(label) ?? marker);
+}
+
 function parseTitleAndSubtitle(lines: string[]): { title: string; subtitle: string } {
   const titleIdx = lines.findIndex((l) => /^#\s+/.test(l));
   if (titleIdx === -1) return { title: "", subtitle: "" };
@@ -289,8 +321,12 @@ const BOOKING_PREFIX = "訂位：";
  * links (→ links[], with the link syntax replaced by its label in-place),
  * with whatever remains → notes. Any further `｜` inside that remaining text
  * is left alone — it's just part of the sentence.
+ *
+ * `[^label]` footnote references are expanded after the `｜` split (so prose
+ * pulled in from a definition can contain `｜` freely) and before the link
+ * scan (so links written inside a definition still reach `links[]`).
  */
-function parseNotesCell(raw: string): ParsedNotes {
+function parseNotesCell(raw: string, footnotes: Map<string, string>): ParsedNotes {
   let text = raw;
   let booking: string | undefined;
 
@@ -306,6 +342,9 @@ function parseNotesCell(raw: string): ParsedNotes {
     }
   }
 
+  if (booking) booking = resolveFootnotes(booking, footnotes);
+  text = resolveFootnotes(text, footnotes);
+
   const links: ScheduleLink[] = [];
   const notes = text
     .replace(/\[([^\]]*)\]\(([^)]*)\)/g, (_match, label: string, url: string) => {
@@ -317,7 +356,7 @@ function parseNotesCell(raw: string): ParsedNotes {
   return { booking, notes, links };
 }
 
-function parseDayItemRow(cells: string[]): DayItem {
+function parseDayItemRow(cells: string[], footnotes: Map<string, string>): DayItem {
   const [
     doneCell = "",
     time = "",
@@ -330,7 +369,7 @@ function parseDayItemRow(cells: string[]): DayItem {
     log = "",
   ] = cells;
 
-  const { booking, notes, links } = parseNotesCell(notesCell);
+  const { booking, notes, links } = parseNotesCell(notesCell, footnotes);
 
   return {
     title,
@@ -347,7 +386,7 @@ function parseDayItemRow(cells: string[]): DayItem {
   };
 }
 
-function parseDayBlocks(lines: string[]): TripDay[] {
+function parseDayBlocks(lines: string[], footnotes: Map<string, string>): TripDay[] {
   const section = getSection(lines, "每日行程");
   const dayStartIdxs: number[] = [];
   section.forEach((l, i) => {
@@ -358,7 +397,9 @@ function parseDayBlocks(lines: string[]): TripDay[] {
     const endIdx = i + 1 < dayStartIdxs.length ? dayStartIdxs[i + 1] : section.length;
     const blockLines = section.slice(startIdx, endIdx);
     const heading = parseDayHeading(blockLines[0]);
-    const items = extractTableRows(blockLines.slice(1)).map(parseDayItemRow);
+    const items = extractTableRows(blockLines.slice(1)).map((cells) =>
+      parseDayItemRow(cells, footnotes),
+    );
 
     return {
       date: heading?.date ?? "",
@@ -384,12 +425,12 @@ function parseBudget(lines: string[]): string {
 
 /** Parse the full itinerary note (the file containing "## 每日行程"). */
 export function parseTripMarkdown(raw: string): ParsedTripMarkdown {
-  const lines = stripFrontmatter(raw).split("\n");
+  const { footnotes, lines } = extractFootnotes(stripFrontmatter(raw).split("\n"));
 
   const { title, subtitle } = parseTitleAndSubtitle(lines);
   const flights = parseFlights(lines);
   const budget = parseBudget(lines);
-  const days = parseDayBlocks(lines);
+  const days = parseDayBlocks(lines, footnotes);
   const overview = parseOverviewRows(lines);
   const practical = parsePracticalFromMain(lines);
 

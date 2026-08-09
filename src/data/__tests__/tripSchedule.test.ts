@@ -87,6 +87,19 @@ describe("real trip note", () => {
     expect(baseball!.place?.lng).toBe(129.0615);
   });
 
+  it("expands the KBO footnote back into the baseball row's notes", () => {
+    const baseball = TRIP_DAYS.flatMap((d) => d.items).find((it) => it.title.includes("看棒球"))!;
+    expect(baseball.notes).toContain("giantsclub.com 與樂天巨人官方 app 售票");
+    expect(baseball.notes).not.toContain("[^");
+    expect(baseball.links.map((l) => l.label)).toEqual(["KBO 官方賽程", "樂天官方售票"]);
+  });
+
+  it("keeps the footnote definitions out of the practical sections", () => {
+    const flat = [...PRACTICAL.住宿, ...PRACTICAL.交通].join(" ");
+    expect(flat).not.toContain("[^");
+    expect(flat).not.toContain("giantsclub");
+  });
+
   it("has exactly 15 avoid-list items", () => {
     expect(PRACTICAL.避雷清單.length).toBe(15);
   });
@@ -132,6 +145,8 @@ tags:
 |  | 10:00 |  | 景點 | 無座標景點 | 某地標二 |  | 備註B |  |
 |  | 11:00 |  | 美食 | 轉義測試A\\|B | 某地標三 |  | line1<br>line2 |  |
 |  | 12:00 |  | 交通 | 空地點項目 |  |  |  |  |
+|  | 13:00 |  | 景點 | 腳註項目 | 某地標四 |  | 訂位：短訂位｜摘要 [^fn1] |  |
+|  | 14:00 |  | 景點 | 未定義腳註項目 | 某地標五 |  | 摘要 [^nope] |  |
 
 ## 🏨 住宿
 
@@ -152,6 +167,8 @@ tags:
 ## 📱 實用 App
 
 AppA
+
+[^fn1]: 長註解含全形分隔｜還有 [連結](https://example.com/a)
 `;
 
 describe("parseTripMarkdown (synthetic fixture)", () => {
@@ -174,7 +191,22 @@ describe("parseTripMarkdown (synthetic fixture)", () => {
       city: "A市",
       theme: "主題A",
     });
-    expect(parsed.days[0].items.length).toBe(4);
+    expect(parsed.days[0].items.length).toBe(6);
+  });
+
+  it("expands a footnote after the ｜ split, so its own ｜ and links survive", () => {
+    const withFootnote = parsed.days[0].items[4];
+    expect(withFootnote.booking).toBe("短訂位");
+    expect(withFootnote.notes).toBe("摘要 長註解含全形分隔｜還有 連結");
+    expect(withFootnote.links).toEqual([{ label: "連結", url: "https://example.com/a" }]);
+  });
+
+  it("leaves an undefined footnote reference in place rather than dropping it", () => {
+    expect(parsed.days[0].items[5].notes).toBe("摘要 [^nope]");
+  });
+
+  it("does not leak footnote definitions into the practical sections", () => {
+    expect(parsed.practical.app).toBe("AppA");
   });
 
   it("a place with coordinates parses lat/lng", () => {
