@@ -532,6 +532,25 @@ export function TripSchedulePage() {
             <div style={{ fontSize: "0.8rem", color: "var(--text-gray-400)", lineHeight: 1.6 }}>
               {TRIP.budget}
             </div>
+            <a
+              href="https://seanachan.github.io/trip-debt-calculator/188JT2"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                flex: "none",
+                marginLeft: "auto",
+                padding: "8px 12px",
+                borderRadius: 8,
+                background: "var(--purdue-gold)",
+                color: "var(--space-blue)",
+                fontSize: "0.76rem",
+                fontWeight: 700,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              開啟記帳工具 ↗
+            </a>
           </div>
         </div>
 
