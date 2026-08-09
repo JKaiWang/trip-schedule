@@ -211,21 +211,6 @@ const flightTag: CSSProperties = {
   padding: "4px 8px",
   borderRadius: 6,
 };
-const splitLink: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 12,
-  marginTop: 12,
-  padding: "13px 16px",
-  background: "rgba(206,184,136,0.10)",
-  border: "1px solid rgba(206,184,136,0.32)",
-  borderRadius: 11,
-  color: "var(--purdue-gold)",
-  fontSize: "0.86rem",
-  fontWeight: 600,
-  textDecoration: "none",
-};
 const infoCard: CSSProperties = {
   padding: "16px 18px",
   background: "var(--space-light)",
@@ -547,8 +532,13 @@ export function TripSchedulePage() {
             <div style={{ fontSize: "0.8rem", color: "var(--text-gray-400)", lineHeight: 1.6 }}>
               {TRIP.budget}
             </div>
+            {/* No room code in this URL. The 6-char code is the group's only
+                credential (see firestore.rules — any anonymous visitor holding
+                it can read, add and delete expenses), and this page is public.
+                The bare path is still one tap for us: the calculator resumes
+                the group this device already joined from localStorage. */}
             <a
-              href="https://seanachan.github.io/trip-debt-calculator/188JT2"
+              href="/trip-debt-calculator"
               target="_blank"
               rel="noreferrer"
               style={{
@@ -589,14 +579,6 @@ export function TripSchedulePage() {
           ))}
         </div>
 
-        {/* The calculator is a separate repo and a separate Pages project site,
-            so this is a plain cross-origin-path link, not a router <Link>. */}
-        <a href="/trip-debt-calculator" style={splitLink}>
-          <span>💰 分帳計算機</span>
-          <span className="mono" style={{ fontSize: "0.72rem", opacity: 0.75 }}>
-            記帳・結清 →
-          </span>
-        </a>
       </header>
 
       {/* ---- sticky day tabs ---- */}
